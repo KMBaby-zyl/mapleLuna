@@ -89,7 +89,6 @@ end
 -- ===== 启动 / 停止 =====
 local function start()
     running = true
-    -- startMacro()
     startBuff()
     buffTimer = hs.timer.doEvery(BUFF_INTERVAL, function()
         if running then startBuff() end
