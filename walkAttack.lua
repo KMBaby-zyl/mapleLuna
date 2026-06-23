@@ -7,6 +7,7 @@ local BUFF_KEY_GAP = 1.5    -- buff 按键之间的间隔（秒）
 local ATTACK_KEY = "q"          -- 攻击键
 local MOVE_KEYS = { "left", "right" }
 local BUFF_KEYS = { "3", "4" }
+local KEY_HOLD = 0.03           -- 点按时按住的时长（秒）；太短游戏会采样不到导致丢键
 
 -- ===== 状态 =====
 local running = false    -- 总开关：行走攻击 + buff 是否在运行
@@ -27,6 +28,7 @@ end
 
 local function clickKey(key)
     pressKey(key)
+    hs.timer.usleep(math.floor(KEY_HOLD * 1000000))
     releaseKey(key)
 end
 
