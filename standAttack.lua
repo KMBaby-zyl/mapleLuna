@@ -1,13 +1,17 @@
 -- ===== 配置 =====
 local TURN_INTERVAL = 3      -- 切换左右朝向间隔（秒）
 local TURN_PAUSE = 1         -- 换方向前停止输出的时间（秒）
-local BUFF_INTERVAL = 300    -- buff 触发周期（秒）
-local BUFF_KEY_GAP = 1.5     -- buff 按键之间的间隔（秒）
+local BUFF_INTERVAL = 180    -- buff 触发周期（秒）
+local BUFF_KEY_GAP = 1.1     -- buff 按键之间的间隔（秒）
 
 local ATTACK_KEY = "q"          -- 攻击键
+local JUMP_KEY = "space"        -- 跳跃键
 local TURN_KEYS = { "left", "right" }
+local WALK_KEYS = { "left", "right" }  -- 周期移动方向（交替使用）
 local BUFF_KEYS = { "3", "4" }
 local KEY_HOLD = 0.03           -- 点按时按住的时长（秒）；太短游戏会采样不到导致丢键
+local JUMP_WALK_GAP = 0.15      -- 跳完到开始走之间的间隔（秒）
+local WALK_DURATION = 2         -- 每次走路持续时间（秒）
 
 -- ===== 状态 =====
 local running = false    -- 总开关：站桩输出 + buff 是否在运行
@@ -15,6 +19,7 @@ local attacking = false  -- 站桩输出是否在运行
 local turnTimer = nil
 local buffTimer = nil
 local index = 1 -- 当前朝向在 TURN_KEYS 中的下标
+local walkIndex = 1 -- 当前移动方向在 WALK_KEYS 中的下标（每周期交替）
 
 -- ===== 按键辅助 =====
 local function pressKey(key)
@@ -35,6 +40,28 @@ local function releaseTurnKeys()
     for _, key in ipairs(TURN_KEYS) do
         releaseKey(key)
     end
+end
+
+local function releaseWalkKeys()
+    for _, key in ipairs(WALK_KEYS) do
+        releaseKey(key)
+    end
+end
+
+-- ===== 周期移动 =====
+-- 跳一下，然后按住方向键走 WALK_DURATION 秒（左右交替），完成后回调
+local function jumpAndWalk(onDone)
+    clickKey(JUMP_KEY)
+    hs.timer.doAfter(JUMP_WALK_GAP, function()
+        local key = WALK_KEYS[walkIndex]
+        walkIndex = walkIndex % #WALK_KEYS + 1
+        print("walk " .. key)
+        pressKey(key)
+        hs.timer.doAfter(WALK_DURATION, function()
+            releaseKey(key)
+            if onDone then onDone() end
+        end)
+    end)
 end
 
 -- ===== 站桩输出 =====
@@ -77,6 +104,7 @@ local function stopAttack()
     stopAttackLoop()
 
     releaseTurnKeys()
+    releaseWalkKeys()
 end
 
 -- ===== Buff =====
@@ -88,7 +116,11 @@ local function startBuff()
     local function clickAt(i)
         if i > #BUFF_KEYS then
             print("buff end")
-            if running then startAttack() end
+            if running then
+                jumpAndWalk(function()
+                    if running then startAttack() end
+                end)
+            end
             return
         end
         clickKey(BUFF_KEYS[i])
@@ -120,5 +152,6 @@ end)
 -- 防止崩溃残留按键（兜底）
 hs.shutdownCallback = function()
     releaseTurnKeys()
+    releaseWalkKeys()
     releaseKey(ATTACK_KEY)
 end
