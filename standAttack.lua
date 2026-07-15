@@ -4,7 +4,6 @@ local TURN_PAUSE = 1         -- 换方向前停止输出的时间（秒）
 
 local ATTACK_KEY = "q"          -- 攻击键
 local ATTACK_DIRECTION_MODE = "single" -- "single" 只攻击一个方向；"alternate" 左右轮流
-local SINGLE_ATTACK_DIRECTION = "left"    -- ATTACK_DIRECTION_MODE = "single" 时使用的方向
 local TURN_KEYS = { "left", "right" }
 local KEY_HOLD = 0.03           -- 点按时按住的时长（秒）；太短游戏会采样不到导致丢键
 local TURN_TAP_HOLD = 1      -- 左右切换朝向时点按方向键的时长（秒）；调大可让人物移动一小段
@@ -56,11 +55,8 @@ local function turnCurrent()
     stopAttackLoop()
     hs.timer.doAfter(TURN_PAUSE, function()
         if not attacking then return end
-        local key = SINGLE_ATTACK_DIRECTION
-        if isAlternateMode() then
-            key = TURN_KEYS[index]
-            index = index % #TURN_KEYS + 1
-        end
+        local key = TURN_KEYS[index]
+        index = index % #TURN_KEYS + 1
         clickKey(key, TURN_TAP_HOLD)
         startAttackLoop()
     end)
@@ -72,8 +68,8 @@ local function startAttack()
     attacking = true
     index = 1
 
-    turnCurrent()
     if isAlternateMode() then
+        turnCurrent()
         turnTimer = hs.timer.doEvery(TURN_INTERVAL, turnCurrent)
     end
     startAttackLoop()
